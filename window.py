@@ -3,6 +3,7 @@
 import wx
 import os
 import subprocess
+import thread
 
 MAIN_WINDOW_DEFAULT_SIZE = (300,100)
 
@@ -29,8 +30,8 @@ class Frame(wx.Frame):
 		self.hostButton = wx.Button(self, 3, 'Begin Hosting', (150, 40))
 		self.fileNameLabel = wx.StaticText(self, 4, 'No file selected', (100, 15))
 		
-		# Binds, on click, the LaunchWoof function to my button, which has id 3
-		self.Bind(wx.EVT_BUTTON, self.LaunchWoof, id = 3)
+		# Binds, on click, the OnHost function to my button, which has id 3
+		self.Bind(wx.EVT_BUTTON, self.OnHost, id = 3)
 		self.Bind(wx.EVT_BUTTON, self.OnOpen, id = 2)
 	
 	
@@ -52,7 +53,7 @@ class Frame(wx.Frame):
 		self.Destroy()
 	
 	
-	def LaunchWoof(self, event):
+	def OnHost(self, event):
 		if "No file selected" == self.fileNameLabel.GetLabel():
 			return
 			
@@ -60,6 +61,13 @@ class Frame(wx.Frame):
 			return
 			
 		elif self.lock == False:
+			self.lock = True
+			self.fileNameLabel.SetLabel("Hosting file...")
+			thread.start_new_thread(self.LaunchWoof, ())
+		
+		elif self.lock == True:
+			self.fileNameLabel.SetLabel("Already hosting file!")
+			"""
 			child_pid = os.fork()
 			if child_pid == 0:
 				# child 
@@ -67,8 +75,19 @@ class Frame(wx.Frame):
 			else:
 				# parent
 				self.lock = True
-				self.fileNameLabel.SetLabel("Hosting file...")					
+				self.fileNameLabel.SetLabel("Hosting file...")
+			"""					
 	
+	def LaunchWoof(self):
+		cscript = subprocess.Popen(['python', 'woof', self.filePath], stdout = subprocess.PIPE)
+		retStrings = cscript.communicate()[0]
+		if retStrings.index("wxWoof: SUCCESS"):
+			print "wxWoof: Sucess acknowledged"
+			self.lock = False
+			self.fileNameLabel.SetLabel("File selected: " + self.simpleName)
+		else:
+			print "wxWoof: Failed"
+			# fail cleanup
 
 
 
