@@ -67,16 +67,7 @@ class Frame(wx.Frame):
 		
 		elif self.lock == True:
 			self.fileNameLabel.SetLabel("Already hosting file!")
-			"""
-			child_pid = os.fork()
-			if child_pid == 0:
-				# child 
-				os.execvp('python', ['', 'woof', self.filePath])
-			else:
-				# parent
-				self.lock = True
-				self.fileNameLabel.SetLabel("Hosting file...")
-			"""					
+						
 	
 	def LaunchWoof(self):
 		cscript = subprocess.Popen(['python', 'woof', self.filePath], stdout = subprocess.PIPE)
