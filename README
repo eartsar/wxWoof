@@ -1,0 +1,5 @@
+wxWoof
+
+wxWoof is a personal little mini project that just slaps a simplistic wxWidgets UI (wxPython) onto the well-loved woof script. It is necessary to have python 2.7.2 installed and the latest build of wxPython. Right now, things are only tested on OSX, but it's python, so it should be seriously easy to fix it for any other OS.
+
+ 
