@@ -6,25 +6,39 @@ import subprocess
 import thread
 import localwoof
 
-MAIN_WINDOW_DEFAULT_SIZE = (300,200)
+MAIN_WINDOW_DEFAULT_SIZE = (300,170)
 
+# Creates a file drop target
 class FileDropTarget(wx.FileDropTarget):
     def __init__(self, obj):
         wx.FileDropTarget.__init__(self)
         self.obj = obj
     
+    # Defines what to do when files get dropped on the target
     def OnDropFiles(self, x, y, filenames):
-        self.obj.SetInsertionPointEnd()
-        self.obj.WriteText("%d files(s) dropped at %d, %d:\n" % (len(filenames), x, y))
-        for file in filenames:
-            self.obj.WriteText(file + '\n')
-            self.obj.WriteText('\n')
+        if len(filenames) > 1:
+            popup = wx.MessageDialog(self.obj, "wxWoof only supports single files to host. Compress your directory and/or files into a zip or something, first!", "Too many files!", wx.OK | wx.ICON_INFORMATION)
+            popup.ShowModal()
+            return
+        
+        # This only runs with the first file
+        for filename in filenames:
+            filePath = filename.encode('ascii')
+            self.obj.GetParent().filePath = filePath
+            self.obj.GetParent().simpleName = os.path.split(filePath)[1]
+            self.obj.GetParent().fileNameLabel.SetLabel("File selected: " + self.obj.GetParent().simpleName)
+            bitmap = self.obj.GetParent().closeImage
+            self.obj.GetParent().boxButton.bitmap = bitmap
+            self.obj.GetParent().boxButton.SetBitmapLabel(bitmap)
+            self.obj.GetParent().boxButton.Update()
+    
 
-
+# Creates a frame (our main window)
 class Frame(wx.Frame):
     __slots__ = ['height', 'width'] 
+    
     def __init__(self, parent, id, title):
-        self.height = 200;
+        self.height = 170;
         self.width = 300;
         
         # locking flag
@@ -33,7 +47,7 @@ class Frame(wx.Frame):
         # filePath string
         self.filePath = ""
         
-        # not sure what this does...
+        # Make the style of the frame non-resizable, set the other params
         style = wx.DEFAULT_FRAME_STYLE ^ (wx.RESIZE_BORDER)
         self.frame = wx.Frame.__init__(self, parent, id, title = title, size = MAIN_WINDOW_DEFAULT_SIZE, style = style)
         
@@ -43,26 +57,31 @@ class Frame(wx.Frame):
         self.panel.SetBackgroundColour('White')
         
         # Create my buttons and label
-        self.fileNameLabel = wx.StaticText(self, 4, 'No file selected', (100, 15))
+        self.fileNameLabel = wx.StaticText(self, 1, 'No file selected', pos=(5, 5), size=(290,-1), style=wx.ALIGN_CENTER)
         
-        self.dragTip = wx.StaticText(self, 5, 'Drag a file to the box, or click the button.', (17, 30))
-        self.selectButton = wx.Button(self, 2, 'Select File', (50, 140))
-        self.hostButton = wx.Button(self, 3, 'Begin Hosting', (150, 140))
+        self.dragTip = wx.StaticText(self, 2, 'Select by dragging onto, or clicking, the box.', pos=(5, 22), size=(290,-1), style=wx.ALIGN_CENTER)
         
-        # Define a text control to recieve dropped files
-        # Create a read-only Text Control
-        self.droptextfield = wx.TextCtrl(self, -1, "", pos=(120,60), size=(60,60), style = wx.TE_READONLY)
-        # Make this control a drop target
-        # Create a file drop target
-        self.droptarget = FileDropTarget(self.droptextfield)
-        # Link the drop target object to the text control
-        self.droptextfield.SetDropTarget(self.droptarget)
+        # Make a button that will take the dropped file.        
+        # Grab the cool "open box" image, make it a bitmap
+        imgNameOp = "box_open.jpg"
+        imgNameCl = "box_close.jpg"
+        self.openImage = wx.Image(imgNameOp, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
+        self.closeImage = wx.Image(imgNameCl, wx.BITMAP_TYPE_ANY).ConvertToBitmap()
         
-        # Binds, on click, the OnHost function to my button, which has id 3
-        self.Bind(wx.EVT_BUTTON, self.OnHost, id = 3)
-        self.Bind(wx.EVT_BUTTON, self.OnOpen, id = 2)
+        # Create a bitmap button, bind to select file function
+        self.boxButton = wx.BitmapButton(self, 3, bitmap=self.openImage, pos=(120,45), size=(60,60))
+        self.Bind(wx.EVT_BUTTON, self.OnOpen, id = 3)
+        
+        # Make the button the drop target by making a drop target, and linking
+        self.dropTarget = FileDropTarget(self.boxButton)
+        self.boxButton.SetDropTarget(self.dropTarget)
+        
+        # Create the button to start the hosting, bind to host function
+        self.hostButton = wx.Button(self, 4, 'Click here to host!', (80, 110))
+        self.Bind(wx.EVT_BUTTON, self.OnHost, id = 4)
     
     
+    # Defines the file selection behavior
     def OnOpen(self, event):
         if self.lock:
             return
@@ -70,28 +89,35 @@ class Frame(wx.Frame):
         dlg = wx.FileDialog(self, message = "Select a file...", defaultDir = os.getcwd(), defaultFile = "", style = wx.OPEN)
         
         if dlg.ShowModal() == wx.ID_OK:
+            if len(dlg.GetPaths()) > 1:
+                popup = wx.MessageDialog(self, "wxWoof only supports single files to host. Compress your directory and/or files into a zip or something, first!", "Too many files!", wx.OK | wx.ICON_INFORMATION)
+                popup.ShowModal()
+                return
+                
             self.filePath = dlg.GetPath()
             self.simpleName = os.path.split(self.filePath)[1]
             self.fileNameLabel.SetLabel("File selected: " + self.simpleName)
-            
+            self.boxButton.bitmap = self.closeImage
+            self.boxButton.SetBitmapLabel(self.closeImage)
+            self.boxButton.Update()
         dlg.Destroy()
     
     
+    # Defines the exit behavior
     def OnExit(self, event):
         self.Destroy()
     
     
+    # Defines the hosting behavior. Locks the UI and calls local woof.
     def OnHost(self, event):
         if "No file selected" == self.fileNameLabel.GetLabel():
             return
-            
         elif "Hosting file..." == self.fileNameLabel.GetLabel():
             return
-            
         elif self.lock == False:
             self.lock = True
             self.hostButton.Disable()
-            self.selectButton.Disable()
+            self.boxButton.Disable()
             self.fileNameLabel.SetLabel("Hosting file...")
             thread.start_new_thread(self.LaunchWoof, ())
         
@@ -99,7 +125,9 @@ class Frame(wx.Frame):
             self.fileNameLabel.SetLabel("Already hosting file!")
     
     
+    # Launches the local woof if not locked.
     def LaunchWoof(self):
+        print 'Running using path: ' + self.filePath
         success = localwoof.launch(self.filePath)
         if success:
             print "wxWoof: Sucess acknowledged"
@@ -110,11 +138,13 @@ class Frame(wx.Frame):
             # fail cleanup
 
 
+# Defines our main application
 class App(wx.App):
     
     def OnInit(self):
-        self.frame = Frame(parent = None, id = 5, title = 'Woof')
+        self.frame = Frame(parent = None, id = 100, title = 'Woof')
         self.frame.Show()
+        self.frame.Refresh(True)
         self.SetTopWindow(self.frame)
         return True
     
