@@ -2,4 +2,5 @@
 
 import subprocess
 
-subprocess.call(["arch", "-i386", "python", "window.py"])
+linkedprocess = subprocess.Popen(["arch", "-i386", "python", "window.py"], stdout = subprocess.PIPE)
+outs = linkedprocess.communicate()

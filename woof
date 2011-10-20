@@ -329,9 +329,15 @@ def serve_files (filename, maxdown = 1, ip_addr = '', port = 8080):
 
    try:
       httpd = ThreadedHTTPServer ((ip_addr, port), FileServHTTPRequestHandler)
-   except socket.error:
+   except socket.error as e:
       print >>sys.stderr, "cannot bind to IP address '%s' port %d" % (ip_addr, port)
+      print >>sys.stderr, str(e)
+      print "wxWoof: FAILURE"
       sys.exit (1)
+   except Exception as e:
+	  print "Something unbelievable happened."
+	  print str(e)
+	  sys.exit(2)
 
    if not ip_addr:
       ip_addr = find_ip ()

@@ -4,6 +4,7 @@ import wx
 import os
 import subprocess
 import thread
+import localwoof
 
 MAIN_WINDOW_DEFAULT_SIZE = (300,100)
 
@@ -62,28 +63,28 @@ class Frame(wx.Frame):
 			
 		elif self.lock == False:
 			self.lock = True
+			self.hostButton.Disable()
+			self.selectButton.Disable()
 			self.fileNameLabel.SetLabel("Hosting file...")
 			thread.start_new_thread(self.LaunchWoof, ())
 		
 		elif self.lock == True:
 			self.fileNameLabel.SetLabel("Already hosting file!")
-						
+	
 	
 	def LaunchWoof(self):
-		cscript = subprocess.Popen(['python', 'woof', self.filePath], stdout = subprocess.PIPE)
-		retStrings = cscript.communicate()[0]
-		if retStrings.index("wxWoof: SUCCESS"):
+		success = localwoof.launch(self.filePath)
+		if success:
 			print "wxWoof: Sucess acknowledged"
 			self.lock = False
 			self.fileNameLabel.SetLabel("File selected: " + self.simpleName)
 		else:
-			print "wxWoof: Failed"
+			print "wxWoof: Hosting failed"
 			# fail cleanup
 
 
-
-
 class App(wx.App):
+	
 	
 	def OnInit(self):
 		self.frame = Frame(parent = None, id = 5, title = 'Woof')
