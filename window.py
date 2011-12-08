@@ -6,7 +6,7 @@ import subprocess
 import thread
 import localwoof
 
-MAIN_WINDOW_DEFAULT_SIZE = (300,170)
+MAIN_WINDOW_DEFAULT_SIZE = (300,200)
 
 # Creates a file drop target
 class FileDropTarget(wx.FileDropTarget):
@@ -38,7 +38,7 @@ class Frame(wx.Frame):
     __slots__ = ['height', 'width'] 
     
     def __init__(self, parent, id, title):
-        self.height = 170;
+        self.height = 200;
         self.width = 300;
         
         # locking flag
@@ -56,8 +56,9 @@ class Frame(wx.Frame):
         self.panel = wx.Panel(self)
         self.panel.SetBackgroundColour('White')
         
-        # Create my buttons and label
+        # Create my buttons and labels
         self.fileNameLabel = wx.StaticText(self, 1, 'No file selected', pos=(5, 5), size=(290,-1), style=wx.ALIGN_CENTER)
+        self.hostingLocationLabel = wx.StaticText(self, 8, '', pos=(5, 150), size=(290,-1), style=wx.ALIGN_CENTER)
         
         self.dragTip = wx.StaticText(self, 2, 'Select by dragging onto, or clicking, the box.', pos=(5, 22), size=(290,-1), style=wx.ALIGN_CENTER)
         
@@ -119,6 +120,8 @@ class Frame(wx.Frame):
             self.hostButton.Disable()
             self.boxButton.Disable()
             self.fileNameLabel.SetLabel("Hosting file...")
+            myIp = localwoof.find_ip()
+            self.hostingLocationLabel.SetLabel("D/L ip: " + myIp + ":8080")
             thread.start_new_thread(self.LaunchWoof, ())
         
         elif self.lock == True:
